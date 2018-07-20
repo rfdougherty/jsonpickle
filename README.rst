@@ -16,23 +16,17 @@ jsonpickle supports Python 2.7 and Python 3.4 or greater.
 Install
 =======
 
-Install from pip for the latest stable release:
+Install from github:
 
 ::
 
-    pip install jsonpickle
-
-Install from github for the latest changes:
-
-::
-
-    pip install git+https://github.com/jsonpickle/jsonpickle.git
+    pip install git+https://github.com/rfdougherty/jsonpickle.git
 
 If you have the files checked out for development:
 
 ::
 
-    git clone https://github.com/jsonpickle/jsonpickle.git
+    git clone https://github.com/rfdougherty/jsonpickle.git
     cd jsonpickle
     python setup.py develop
 
@@ -45,6 +39,15 @@ enable the numpy extension by registering its handlers::
 
     >>> import jsonpickle.ext.numpy as jsonpickle_numpy
     >>> jsonpickle_numpy.register_handlers()
+
+Pandas Support
+=============
+jsonpickle includes a built-in pandas extension.  If would like to encode
+pandas DataFrame or Series object then you must enable the pandas extension
+by registering its handlers::
+
+    >>> import jsonpickle.ext.pandas as jsonpickle_pandas
+    >>> jsonpickle_pandas.register_handlers()
 
 jsonpickleJS
 ============
