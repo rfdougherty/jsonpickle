@@ -13,6 +13,11 @@ Bug reports and merge requests are encouraged at the
 jsonpickle supports Python 2.7 and Python 3.4 or greater.
 
 
+Why jsonpickle?
+===============
+Data serialized with python's pickle (or cPicle or dill) is not easily readable outside of python. Using the json format, jsonpickle allows simple data types to be human-readable, and most fileds to be interpretable in any platform that supports json. E.g., unlike pickled ata, jsopickled data stored in an Amazon S3 bucket is indexible by Amazon's Athena.
+
+
 Install
 =======
 
