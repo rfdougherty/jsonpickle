@@ -512,7 +512,7 @@ def importable_name(cls):
 
 def b64encode(data):
     payload = base64.b64encode(data)
-    if PY3 and not isinstance(payload, bytes):
+    if PY3 and isinstance(payload, bytes):
         payload = payload.decode('ascii')
     return payload
 
