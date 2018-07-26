@@ -38,7 +38,7 @@ class PandasProcessor():
         return data
 
     def restore_pandas(self, data):
-        if data['txt']:
+        if data.get('txt', True):
             # It's just csv-encoded text...
             csv = data['values']
         else:
