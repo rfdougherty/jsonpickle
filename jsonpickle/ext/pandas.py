@@ -25,7 +25,7 @@ class PandasProcessor():
         self.size_threshold = size_threshold
         self.compression = compression
 
-    def flatten_pandas(self, buf, data):
+    def flatten_pandas(self, buf, data, meta=None):
         if self.size_threshold is not None and len(buf) > self.size_threshold:
             if self.compression:
                 buf = self.compression.compress(buf.encode())
@@ -35,6 +35,8 @@ class PandasProcessor():
         else:
             data['values'] = buf
             data['txt'] = True
+
+        data['meta'] = meta
         return data
 
     def restore_pandas(self, data):
@@ -45,30 +47,42 @@ class PandasProcessor():
             csv = b64decode(data['values'])
             if data.get('comp', False):
                 csv = self.compression.decompress(csv).decode()
-        return csv
+        meta = data.get('meta', {})
+        return csv,meta
 
 
 class PandasDfHandler(BaseHandler):
     pp = PandasProcessor()
 
     def flatten(self, obj, data):
-        data = self.pp.flatten_pandas(obj.to_csv(index=False), data)
+        # TODO: handle multi-index
+        dtype = obj.dtypes.to_dict()
+        meta = {'dtypes': {k:str(dtype[k]) for k in dtype}, 'index_col': 0}
+        data = self.pp.flatten_pandas(obj.to_csv(), data, meta)
         return data
 
     def restore(self, data):
-        csv = self.pp.restore_pandas(data)
-        return pd.read_csv(StringIO(csv))
+        csv,meta = self.pp.restore_pandas(data)
+        dtype = meta['dtypes'] if 'dtypes' in meta else None
+        df = pd.read_csv(StringIO(csv), index_col=meta.get('index_col', None), dtype=dtype)
+        return df
 
 class PandasSeriesHandler(BaseHandler):
     pp = PandasProcessor()
 
     def flatten(self, obj, data):
-        data = self.pp.flatten_pandas(obj.to_csv(), data)
+        dtypes = {k:str(pd.np.dtype(type(obj[k]))) for k in obj.keys()}
+        meta = {'dtypes': dtypes, 'name': obj.name}
+        # Save series as two rows rather than two cols to make preserving type easier
+        data = self.pp.flatten_pandas(obj.to_frame().T.to_csv(), data, meta)
         return data
 
     def restore(self, data):
-        csv = self.pp.restore_pandas(data)
-        return pd.read_csv(StringIO(csv), squeeze=True)
+        csv,meta = self.pp.restore_pandas(data)
+        dtypes = meta['dtypes'] if 'dtypes' in meta else None
+        df = pd.read_csv(StringIO(csv), dtype=dtypes)
+        ser = pd.Series(data=df.iloc[:,1:].values[0], index=df.columns[1:].values, name=meta.get('name', None))
+        return ser
 
 
 def register_handlers():
