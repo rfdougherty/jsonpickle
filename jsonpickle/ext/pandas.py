@@ -6,7 +6,7 @@ import zlib
 
 from ..handlers import BaseHandler, register, unregister
 from ..util import b64decode, b64encode
-
+from ..backend import json
 
 __all__ = ['register_handlers', 'unregister_handlers']
 
@@ -41,14 +41,14 @@ class PandasProcessor():
 
     def restore_pandas(self, data):
         if data.get('txt', True):
-            # It's just csv-encoded text...
-            csv = data['values']
+            # It's just text...
+            buf = data['values']
         else:
-            csv = b64decode(data['values'])
+            buf = b64decode(data['values'])
             if data.get('comp', False):
-                csv = self.compression.decompress(csv).decode()
+                buf = self.compression.decompress(buf).decode()
         meta = data.get('meta', {})
-        return csv,meta
+        return buf,meta
 
 
 class PandasDfHandler(BaseHandler):
@@ -84,12 +84,31 @@ class PandasSeriesHandler(BaseHandler):
         ser = pd.Series(data=df.iloc[:,1:].values[0], index=df.columns[1:].values, name=meta.get('name', None))
         return ser
 
+class PandasIndexHandler(BaseHandler):
+    pp = PandasProcessor()
+
+    def flatten(self, obj, data):
+        meta = {'dtype': str(obj.dtype), 'name': obj.name}
+        buf = json.dumps(obj.tolist())
+        data = self.pp.flatten_pandas(buf, data, meta)
+        return data
+
+    def restore(self, data):
+        buf,meta = self.pp.restore_pandas(data)
+        dtype = meta.get('dtype', None)
+        name = meta.get('name', None)
+        idx = pd.Index(json.loads(buf), dtype=dtype, name=name)
+        return idx
+
 
 def register_handlers():
     register(pd.DataFrame, PandasDfHandler, base=True)
     register(pd.Series, PandasSeriesHandler, base=True)
+    register(pd.Index, PandasIndexHandler, base=True)
 
 
 def unregister_handlers():
     unregister(pd.DataFrame)
     unregister(pd.Series)
+    unregister(pd.Index)
+
